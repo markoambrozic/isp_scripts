@@ -122,6 +122,11 @@ iptables -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 # (3) Allow outgoing DNS requests to the DNS server in variable NAMESERVER
 iptables -A OUTPUT -p udp -d $NAMESERVER --dport 53 -m state --state NEW -j ACCEPT
 
+iptables -A INPUT -p udp -s $NAMESERVER --sport 53 -m state --state NEW -j ACCEPT
+
+iptables -A OUTPUT -p tcp -d $NAMESERVER --dport 53 -m state --state NEW -j ACCEPT
+
+iptables -A INPUT -p tcp -s $NAMESERVER --sport 53 -m state --state NEW -j ACCEPT
 # (4) TODO: Allow outgoing SSH connections to remote SSH servers
 #iptables -A OUTPUT -p tcp --dport 22 -m state --state NEW,ESTABLISHED -j ACCEPT
 
@@ -169,7 +174,7 @@ iptables -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
 iptables -A FORWARD -p icmp --icmp-type echo-request -m state --state NEW  -j ACCEPT
 
 # (15) Forward DNS requests from subnets to Internet and permit in corresponding responses
-iptables -A FORWARD -o $INET_IFACE -p udp -m multiport --ports 53 -m state --state NEW -j ACCEPT
+iptables -A FORWARD -i enp0s8 -o $INET_IFACE -p udp -m multiport --ports 53 -m state --state NEW -j ACCEPT
 
 # (16) TODO: Forward HTTP, HTTPS and SSH traffic from client_subnet to Internet and to server_subnet
 iptables -A FORWARD -i enp0s8 -o $INET_IFACE -p tcp -m multiport --ports 22,80,443 -m state --state NEW -j ACCEPT
