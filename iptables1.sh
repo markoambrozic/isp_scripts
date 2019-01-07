@@ -127,31 +127,39 @@ iptables -A INPUT  -p tcp ! --syn --sport 22 -j ACCEPT
 iptables -A INPUT  -p tcp --dport 22 -j ACCEPT
 iptables -A OUTPUT -p tcp --sport 22 -j ACCEPT
 
-
 ################
 ### HTTP settings
 ### (4) TODO: Allow outgoing HTTP connections
-
+iptables -A OUTPUT -p tcp --dport 80 -j ACCEPT
+iptables -A INPUT  -p tcp ! --syn --sport 80 -j ACCEPT
 
 ### (5) TODO: Allow incoming HTTP connections
-
+iptables -A INPUT  -p tcp --dport 80 -j ACCEPT
+iptables -A OUTPUT -p tcp --sport 80 -j ACCEPT
 
 ################
 ### HTTPS settings
 ### (6) TODO: Allow outgoing HTTPS connections
-
+iptables -A OUTPUT -p tcp --dport 443 -j ACCEPT
+iptables -A INPUT  -p tcp ! --syn --sport 443 -j ACCEPT
 
 ### (7) TODO: Allow incoming HTTPS connections
-
+iptables -A INPUT  -p tcp --dport 443 -j ACCEPT
+iptables -A OUTPUT -p tcp --sport 443 -j ACCEPT
 
 #################
 ### ICMP settings
 ### (8) TODO: Allow outgoing ping requests (and corresponding ping replies)
 ### Hint: use protocol icmp and set the type of the message to either request
 ### or reply.
+iptables -A OUTPUT -p icmp --icmp-type 8 -d 0/0 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
 
+iptables -A INPUT -p icmp --icmp-type 0 -s 0/0 -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 ### (9) TODO: Allow incoming pings but only from a specific IP address (you may decide which one)
+iptables -A INPUT -p icmp --icmp-type 8 -s 0/0 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+
+iptables -A OUTPUT -p icmp --icmp-type 0 -d 0/0 -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 }
 
