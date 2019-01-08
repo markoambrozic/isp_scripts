@@ -35,6 +35,8 @@ IPADDR=`ifconfig $INET_IFACE | grep "inet" | cut -d " " -f10 | cut -d " " -f1`
 # DNS server
 NAMESERVER=`nmcli dev show $INET_IFACE | grep IP4.DNS | cut -d ":" -f2 | tail --lines=1 | tr -d '[[:space:]]'`
 NAMESERVER='8.8.8.8'
+
+FACEBOOK_IP='157.240.1.35'
 #################################
 ### END USER CONFIGURABLE SECTION
 #################################
@@ -112,6 +114,11 @@ iptables -A OUTPUT -o lo -j ACCEPT
 
 ### Stateful firewall assignments
 
+#FIRST DENY THAN ACCEPT
+iptables -A OUTPUT -p tcp -d $FACEBOOK_IP --dport 443 -m state --state NEW,ESTABLISHED -j DROP
+
+iptables -A OUTPUT -p tcp -d 31.13.90.36 --dport 443 -m state --state NEW,ESTABLISHED -j DROP
+
 # (1) ESTABLISH-RELATED trick: Allow all incoming packets that belong to ESTABLISHED or RELATED connections.
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 # From here onwards, we can add incoming firewall exceptions using only the NEW state
@@ -158,28 +165,65 @@ iptables -A OUTPUT -p icmp --icmp-type 0 -d 0/0 -m state --state NEW -j ACCEPT
 # (12) TODO: Compress rules 4-9 into two iptables commands using
 # "-m multiport" and "--ports" switches.
 # Make sure to comment rules 4-9 before testing.
-iptables -A INPUT -p tcp -m multiport --dports 22,80,443 -m state --state NEW -j ACCEPT
+iptables -A INPUT -p tcp -m multiport --dports 22,80,443,700 -m state --state NEW -j ACCEPT
 
-iptables -A OUTPUT -p tcp -m multiport --dports 22,80,443 -m state --state NEW,ESTABLISHED -j ACCEPT
+iptables -A OUTPUT -p tcp -m multiport --dports 22,80,443,700 -m state --state NEW,ESTABLISHED -j ACCEPT
 
 ### FORWARDING RULES
 
 # Do NAT for internet-bound traffic
 iptables -t nat -A POSTROUTING -o $INET_IFACE -j MASQUERADE
 
+# FIRST DENY THAN ACCEPT
+#iptables -A FORWARD -d $FACEBOOK_IP -p tcp -m multiport --ports 80,443 -j DROP
+
+#iptables -A FORWARD -p tcp -d '157.240.1.35' --dport 443 -m state --state NEW,ESTABLISHED -j DROP
+
+#iptables -A FORWARD -p tcp -d '31.13.90.36' --dport 443 -m state --state NEW,ESTABLISHED -j DROP
+
+
 # (13) TODO: Allow routing of packets that belong to ESTABLISHED or RELATED connections.
 iptables -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
 
+iptables -A FORWARD -i enp0s8 -p tcp -d '157.240.1.35' -m multiport --ports 80,443 -m state --state NEW,ESTABLISHED -j DROP
+
+iptables -A FORWARD -i enp0s8 -p tcp -d '31.13.90.36' -m multiport --ports 80,443 -m state --state NEW,ESTABLISHED -j DROP
+
+iptables -A FORWARD -i enp0s8 -p tcp -d '185.60.216.35' -m multiport --ports 80,443 -m state --state NEW,ESTABLISHED -j DROP
+
+iptables -A FORWARD -i enp0s8 -p tcp -d 'facebook.com' -m multiport --ports 80,443 -m state --state NEW,ESTABLISHED -j DROP
+
+#185.60.216.35
+
 # (14) Forward pings
 iptables -A FORWARD -p icmp --icmp-type echo-request -m state --state NEW  -j ACCEPT
+
+# FIRST DENY THAN ACCEPT
+iptables -A FORWARD -i enp0s8 -o $INET_IFACE -d $FACEBOOK_IP -p tcp -m multiport --ports 80,443 -j DROP
 
 # (15) Forward DNS requests from subnets to Internet and permit in corresponding responses
 iptables -A FORWARD -i enp0s8 -o $INET_IFACE -p udp -m multiport --ports 53 -m state --state NEW -j ACCEPT
 
 # (16) TODO: Forward HTTP, HTTPS and SSH traffic from client_subnet to Internet and to server_subnet
-iptables -A FORWARD -i enp0s8 -o $INET_IFACE -p tcp -m multiport --ports 22,80,443 -m state --state NEW -j ACCEPT
+iptables -A FORWARD -i enp0s8 -o $INET_IFACE -p tcp -m multiport --ports 80,443 -m state --state NEW -j ACCEPT
 
 iptables -A FORWARD -i enp0s8 -o enp0s9 -p tcp -m multiport --ports 22,80,443 -m state --state NEW -j ACCEPT
+
+
+# Only allow ssh to server and prevent to the internet
+#iptables -A FORWARD -i enp0s8 -o $INET_IFACE -m state --state NEW -p tcp --dport 700 -j DROP
+
+#iptables -A FORWARD -i enp0s8 -p tcp -d '157.240.1.35' -m multiport --ports 80,443 -m state --state NEW,ESTABLISHED -j DROP
+
+#iptables -A FORWARD -i enp0s8 -p tcp -d '31.13.90.36' -m multiport --ports 80,443 -m state --state NEW,ESTABLISHED -j DROP
+
+#iptables -A FORWARD -i enp0s8 -p tcp -d '185.60.216.35' -m multiport --ports 80,443 -m state --state NEW,ESTABLISHED -j DROP
+
+#iptables -A FORWARD -i enp0s8 -p tcp -d 'facebook.com' -m multiport --ports 80,443 -m state --state NEW,ESTABLISHED -j DROP
+
+
+
+
 }
 
 #
